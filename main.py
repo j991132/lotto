@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import os
 
 # Setting page configuration
 st.set_page_config(page_title="South Korean Lotto Analysis", layout="wide")
@@ -12,16 +13,25 @@ This app analyzes historical South Korean Lotto winning numbers (Draws 1 to 1144
 and predicts numbers for the current week based on frequency.
 """)
 
+# Debugging: Display current working directory and file existence
+st.write(f"Current working directory: {os.getcwd()}")
+file_path = "lotto_data.xlsx"
+st.write(f"Checking for Excel file at: {file_path}")
+if os.path.exists(file_path):
+    st.success("Excel file found!")
+else:
+    st.error(f"Excel file not found at: {file_path}. Please ensure it is uploaded to the repository root.")
+
 # Loading the Excel file
 @st.cache_data
 def load_data():
-    file_path = "lotto_data.xlsx"
     try:
         df = pd.read_excel(file_path, sheet_name=0)
         st.success("Excel file loaded successfully!")
+        st.write(f"Columns in Excel file: {list(df.columns)}")
         return df
     except FileNotFoundError:
-        st.error(f"Excel file not found at: {file_path}. Please ensure the file is uploaded to the repository.")
+        st.error(f"Excel file not found at: {file_path}. Please upload 'lotto_data.xlsx' to the repository.")
         return None
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")

@@ -130,13 +130,13 @@ def app():
         st.error(f"막대 그래프 생성 중 오류가 발생했습니다: {e}")
 
     st.subheader("로또 번호 출현 횟수 데이터")
-    st.dataframe(number_counts, use_container_width=False) 
+    # st.dataframe 대신 st.table을 사용하여 스크롤 없이 전체 데이터 표시
+    st.table(number_counts) 
 
     # --- 로또 당첨번호 예측 기능 추가 ---
     st.subheader("이번 주 로또 당첨번호 예측 (5세트)")
     st.info("이 예측은 과거 당첨번호의 출현 빈도에 기반한 통계적 추정이며, 실제 당첨을 보장하지 않습니다. 로또는 무작위 게임입니다.")
     
-    # 예측 근거 설명 추가
     st.markdown("""
     **예측 번호 선정 근거:**
     이 예측은 현재 화면에 표시된 기간 동안의 로또 당첨 번호 출현 횟수 통계를 바탕으로 합니다.

@@ -137,10 +137,8 @@ def app():
         num_rows_target = 10 # 목표 행 수
         num_total_entries = len(df_counts)
 
-        # 필요한 열 쌍의 수 계산 (최대 5열까지)
         num_pairs_per_row = max(1, int(np.ceil(num_total_entries / num_rows_target)))
         
-        # 재구성된 데이터를 담을 리스트
         reshaped_data = []
         for i in range(num_rows_target):
             row_data = {}
@@ -150,19 +148,22 @@ def app():
                     row_data[f'번호 {j+1}'] = df_counts.iloc[idx]['번호']
                     row_data[f'횟수 {j+1}'] = df_counts.iloc[idx]['횟수']
                 else:
-                    # 데이터가 없는 셀은 빈 문자열로 채움 (NaN은 st.table에서 빈 칸으로 보임)
-                    # 보기 좋게 빈 칸으로 보이도록 np.nan 유지
                     row_data[f'번호 {j+1}'] = np.nan 
                     row_data[f'횟수 {j+1}'] = np.nan
             reshaped_data.append(row_data)
 
-        # 리스트를 DataFrame으로 변환
         reshaped_df = pd.DataFrame(reshaped_data)
         
-        # 모든 값이 NaN인 열은 제거 (예: 45개 미만일 때 생길 수 있는 불필요한 열)
         reshaped_df.dropna(axis=1, how='all', inplace=True)
 
-        st.table(reshaped_df) # st.table로 스크롤 없이 전체 데이터 표시
+        # '번호'와 '횟수' 컬럼을 정수형 (NaN 허용)으로 변환
+        for col in reshaped_df.columns:
+            if '번호' in col or '횟수' in col:
+                # pd.to_numeric을 사용하여 숫자로 변환할 수 없는 값은 NaN으로 만들고,
+                # astype(pd.Int64Dtype())로 NaN을 허용하는 정수형으로 변환
+                reshaped_df[col] = pd.to_numeric(reshaped_df[col], errors='coerce').astype(pd.Int64Dtype())
+
+        st.table(reshaped_df) 
     else:
         st.warning("경고: 로또 번호 출현 횟수 데이터가 없습니다.")
 

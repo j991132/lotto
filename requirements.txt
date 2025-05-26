@@ -1,7 +1,4 @@
-streamlit
-pandas
-matplotlib
-numpy
-beautifulsoup4
-requests
-scikit-learn
+streamlit 
+pandas 
+numpy 
+plotly

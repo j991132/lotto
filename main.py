@@ -3,11 +3,40 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from matplotlib import font_manager, rc # 폰트 설정을 위한 모듈 임포트
 
 def app():
     st.set_page_config(layout="wide") # 전체 화면 폭 사용 설정
     st.title("역대 로또 당첨번호 분석")
     st.write("로또 당첨번호를 많이 나온 횟수 순으로 막대그래프로 보여줍니다.")
+
+    # Matplotlib 한글 폰트 설정
+    # 시스템에 설치된 한글 폰트들을 확인하여 설정합니다.
+    font_paths = font_manager.findSystemFonts(fontpaths=None, fontext='ttf')
+    korean_font_name = None
+
+    # 여러 한글 폰트 이름을 시도하여 사용 가능한 폰트를 찾습니다.
+    # 우선 순위: Malgun Gothic (Windows), AppleGothic (macOS), NanumGothic (다용도)
+    possible_korean_fonts = ['Malgun Gothic', 'AppleGothic', 'NanumGothic', 'NanumSquare', 'NanumBarunGothic']
+    
+    for font_name_attempt in possible_korean_fonts:
+        for font_path in font_paths:
+            fp = font_manager.FontProperties(fname=font_path)
+            if font_name_attempt.lower() in fp.get_name().lower():
+                korean_font_name = fp.get_name()
+                break
+        if korean_font_name:
+            break
+
+    if korean_font_name:
+        rc('font', family=korean_font_name)
+        plt.rcParams['axes.unicode_minus'] = False # 한글 폰트 사용 시 마이너스 부호 깨짐 방지
+        # st.info(f"한글 폰트 '{korean_font_name}'를 설정했습니다.") # 디버깅 메시지 제거 요청으로 주석 처리
+    else:
+        st.warning("경고: 한국어 폰트를 찾을 수 없습니다. 그래프의 한글 텍스트가 깨질 수 있습니다. '나눔고딕' 폰트(무료)를 설치하고 시스템에 반영(재부팅 또는 캐시 업데이트)하시는 것을 권장합니다.")
+        plt.rcParams['font.family'] = 'sans-serif' # 기본 폰트 유지
+        plt.rcParams['axes.unicode_minus'] = False
+
 
     try:
         # 데이터 로드

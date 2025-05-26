@@ -15,23 +15,23 @@ and predicts numbers for the current week based on frequency.
 
 # Debugging: Display current working directory and file existence
 st.write(f"Current working directory: {os.getcwd()}")
-file_path = "lotto_data.xlsx"
-st.write(f"Checking for Excel file at: {file_path}")
+file_path = "lotto_data.csv"
+st.write(f"Checking for CSV file at: {file_path}")
 if os.path.exists(file_path):
-    st.success("Excel file found!")
+    st.success("CSV file found!")
 else:
-    st.error(f"Excel file not found at: {file_path}. Please ensure it is uploaded to the repository root.")
+    st.error(f"CSV file not found at: {file_path}. Please ensure it is uploaded to the repository root.")
 
-# Loading the Excel file
+# Loading the CSV file
 @st.cache_data
 def load_data():
     try:
-        df = pd.read_excel(file_path, sheet_name=0)
-        st.success("Excel file loaded successfully!")
-        st.write(f"Columns in Excel file: {list(df.columns)}")
+        df = pd.read_csv(file_path)
+        st.success("CSV file loaded successfully!")
+        st.write(f"Columns in CSV file: {list(df.columns)}")
         return df
     except FileNotFoundError:
-        st.error(f"Excel file not found at: {file_path}. Please upload 'lotto_data.xlsx' to the repository.")
+        st.error(f"CSV file not found at: {file_path}. Please upload 'lotto_data.csv' to the repository.")
         return None
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")

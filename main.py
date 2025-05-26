@@ -4,14 +4,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from matplotlib import font_manager, rc
-from datetime import datetime, date, timedelta # timedelta 임포트 추가
+from datetime import datetime, date, timedelta
+import random # random 모듈 임포트 추가
 
 def app():
     st.set_page_config(layout="wide")
     st.title("역대 로또 당첨번호 분석")
     st.write("로또 당첨번호를 많이 나온 횟수 순으로 막대그래프로 보여줍니다.")
 
-    # Matplotlib 한글 폰트 설정 (이모지 폰트 관련 설정은 제거)
+    # Matplotlib 한글 폰트 설정
     font_paths = font_manager.findSystemFonts(fontpaths=None, fontext='ttf')
     korean_font_name = None
     
@@ -28,7 +29,7 @@ def app():
 
     if korean_font_name:
         rc('font', family=korean_font_name)
-        plt.rcParams['axes.unicode_minus'] = False # 한글 폰트 사용 시 마이너스 부호 깨짐 방지
+        plt.rcParams['axes.unicode_minus'] = False
     else:
         st.warning("경고: 한국어 폰트를 찾을 수 없습니다. 그래프의 한글 텍스트가 깨질 수 있습니다. '나눔고딕' 폰트(무료)를 설치하고 시스템에 반영(재부팅 또는 캐시 업데이트)하시는 것을 권장합니다.")
         plt.rcParams['font.family'] = 'sans-serif'
@@ -118,9 +119,8 @@ def app():
 
     try:
         fig, ax = plt.subplots(figsize=(15, 8))
-        # X축 라벨을 원래 숫자 형태로 표현 (이모지 관련 코드 제거)
         sns.barplot(x=number_counts.index, y=number_counts.values, palette='viridis', ax=ax)
-        plt.xticks(rotation=90) # 숫자 라벨 회전
+        plt.xticks(rotation=90)
 
         ax.set_title('로또 당첨번호 출현 횟수', fontsize=16)
         ax.set_xlabel('로또 번호', fontsize=12)
@@ -133,6 +133,41 @@ def app():
 
     st.subheader("로또 번호 출현 횟수 데이터")
     st.dataframe(number_counts, use_container_width=False) 
+
+    # --- 로또 당첨번호 예측 기능 추가 ---
+    st.subheader("이번 주 로또 당첨번호 예측 (5세트)")
+    st.info("이 예측은 과거 당첨번호의 출현 빈도에 기반한 통계적 추정이며, 실제 당첨을 보장하지 않습니다. 로또는 무작위 게임입니다.")
+
+    if not number_counts.empty:
+        all_possible_numbers = number_counts.index.tolist()
+        
+        # 예측에 사용할 번호 풀 (가장 많이 나온 번호들 상위 30개)
+        # 전체 번호 개수보다 많아지지 않도록 min 함수 사용
+        prediction_pool_size = min(30, len(all_possible_numbers)) 
+        prediction_pool = number_counts.head(prediction_pool_size).index.tolist()
+
+        predicted_sets = []
+        num_sets_to_predict = 5
+        numbers_per_set = 6
+
+        # 5세트의 예측 번호 생성
+        while len(predicted_sets) < num_sets_to_predict:
+            if len(prediction_pool) < numbers_per_set:
+                # 예측 풀이 충분하지 않으면 전체 로또 번호에서 무작위 선택
+                current_set = sorted(random.sample(range(1, 46), numbers_per_set)) # 로또 번호는 1-45
+            else:
+                # 예측 풀에서 무작위 선택
+                current_set = sorted(random.sample(prediction_pool, numbers_per_set))
+            
+            # 생성된 세트가 이미 예측된 세트 목록에 없는지 확인 (중복 방지)
+            if current_set not in predicted_sets:
+                predicted_sets.append(current_set)
+
+        # 예측 결과 출력
+        for i, lotto_set in enumerate(predicted_sets):
+            st.write(f"**예측 {i+1}**: {', '.join(map(str, lotto_set))}")
+    else:
+        st.warning("경고: 로또 번호 출현 횟수 데이터가 없어 예측을 생성할 수 없습니다.")
 
 if __name__ == '__main__':
     app()

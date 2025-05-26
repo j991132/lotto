@@ -4,35 +4,17 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from matplotlib import font_manager, rc
-from datetime import datetime, date
-
-# emoji 라이브러리 임포트 (설치 필요)
-try:
-    import emoji
-except ImportError:
-    st.error("오류: 'emoji' 라이브러리가 설치되어 있지 않습니다. 다음 명령으로 설치해주세요: pip install emoji")
-    st.stop() # 라이브러리가 없으면 앱 실행 중단
-
-# 숫자를 이모지 문자열로 변환하는 함수
-def number_to_emoji_str(number):
-    s = str(number)
-    emoji_str = ""
-    for digit in s:
-        # emoji.emojize를 사용하여 숫자 이모지로 변환
-        # 예: '1' -> '1️⃣', '0' -> '0️⃣'
-        emoji_str += emoji.emojize(f":keycap_digit_{digit}:")
-    return emoji_str
+from datetime import datetime, date, timedelta # timedelta 임포트 추가
 
 def app():
     st.set_page_config(layout="wide")
     st.title("역대 로또 당첨번호 분석")
     st.write("로또 당첨번호를 많이 나온 횟수 순으로 막대그래프로 보여줍니다.")
 
-    # Matplotlib 한글 폰트 및 이모지 폰트 설정
+    # Matplotlib 한글 폰트 설정 (이모지 폰트 관련 설정은 제거)
     font_paths = font_manager.findSystemFonts(fontpaths=None, fontext='ttf')
     korean_font_name = None
     
-    # 폰트 우선순위: Malgun Gothic (Windows), AppleGothic (macOS), NanumGothic (다용도)
     possible_korean_fonts = ['Malgun Gothic', 'AppleGothic', 'NanumGothic', 'NanumSquare', 'NanumBarunGothic']
     
     for font_name_attempt in possible_korean_fonts:
@@ -44,17 +26,13 @@ def app():
         if korean_font_name:
             break
 
-    # 이모지 폰트를 fallback으로 설정
-    # 'Segoe UI Emoji'는 Windows, 'Apple Color Emoji'는 macOS에서 이모지를 지원합니다.
-    # 'DejaVu Sans'는 리눅스 등에서 사용될 수 있는 일반 폰트입니다.
     if korean_font_name:
-        plt.rcParams['font.family'] = [korean_font_name, 'Segoe UI Emoji', 'Apple Color Emoji', 'DejaVu Sans', 'sans-serif']
+        rc('font', family=korean_font_name)
+        plt.rcParams['axes.unicode_minus'] = False # 한글 폰트 사용 시 마이너스 부호 깨짐 방지
     else:
         st.warning("경고: 한국어 폰트를 찾을 수 없습니다. 그래프의 한글 텍스트가 깨질 수 있습니다. '나눔고딕' 폰트(무료)를 설치하고 시스템에 반영(재부팅 또는 캐시 업데이트)하시는 것을 권장합니다.")
-        plt.rcParams['font.family'] = ['Segoe UI Emoji', 'Apple Color Emoji', 'DejaVu Sans', 'sans-serif'] # 한국어 폰트 없어도 이모지 시도
-    
-    plt.rcParams['axes.unicode_minus'] = False # 한글 폰트 사용 시 마이너스 부호 깨짐 방지
-
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['axes.unicode_minus'] = False
 
     try:
         # 데이터 로드
@@ -69,12 +47,18 @@ def app():
     # '추첨일' 컬럼을 datetime 형식으로 변환
     if '추첨일' in df.columns:
         df['추첨일'] = pd.to_datetime(df['추첨일'])
-        min_date = df['추첨일'].min().date()
-        max_date = df['추첨일'].max().date()
+        min_dataset_date = df['추첨일'].min().date()
+        max_dataset_date = df['추첨일'].max().date()
 
         st.sidebar.header("기간 선택")
-        selected_start_date = st.sidebar.date_input("시작일", value=min_date, min_value=min_date, max_value=max_date)
-        selected_end_date = st.sidebar.date_input("종료일", value=max_date, min_value=min_date, max_value=max_date)
+
+        # 기본 종료일을 현재 날짜로 설정 (데이터셋의 최대 날짜를 넘지 않도록)
+        default_end_date = min(date.today(), max_dataset_date)
+        # 기본 시작일을 현재 날짜로부터 1년 전으로 설정 (데이터셋의 최소 날짜보다 이전으로 가지 않도록)
+        default_start_date = max(default_end_date - timedelta(days=365), min_dataset_date)
+
+        selected_start_date = st.sidebar.date_input("시작일", value=default_start_date, min_value=min_dataset_date, max_value=max_dataset_date)
+        selected_end_date = st.sidebar.date_input("종료일", value=default_end_date, min_value=min_dataset_date, max_value=max_dataset_date)
 
         if selected_start_date > selected_end_date:
             st.sidebar.error("오류: 시작일은 종료일보다 빠르거나 같아야 합니다.")
@@ -134,12 +118,9 @@ def app():
 
     try:
         fig, ax = plt.subplots(figsize=(15, 8))
+        # X축 라벨을 원래 숫자 형태로 표현 (이모지 관련 코드 제거)
         sns.barplot(x=number_counts.index, y=number_counts.values, palette='viridis', ax=ax)
-        
-        # X축 라벨을 이모지 숫자로 변환
-        emoji_labels = [number_to_emoji_str(num) for num in number_counts.index]
-        ax.set_xticks(np.arange(len(number_counts))) # 틱 위치 설정
-        ax.set_xticklabels(emoji_labels, rotation=90) # 이모지 라벨 적용
+        plt.xticks(rotation=90) # 숫자 라벨 회전
 
         ax.set_title('로또 당첨번호 출현 횟수', fontsize=16)
         ax.set_xlabel('로또 번호', fontsize=12)
@@ -149,8 +130,6 @@ def app():
         st.pyplot(fig)
     except Exception as e:
         st.error(f"막대 그래프 생성 중 오류가 발생했습니다: {e}")
-        st.warning("경고: 이모지 폰트 설정이 올바르지 않거나 시스템에서 이모지 폰트를 찾을 수 없어 이모지가 깨져 보일 수 있습니다.")
-
 
     st.subheader("로또 번호 출현 횟수 데이터")
     st.dataframe(number_counts, use_container_width=False) 

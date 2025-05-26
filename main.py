@@ -1,106 +1,72 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import io
+
+# Define a function to generate the Streamlit app code
+def generate_streamlit_app_code():
+    streamlit_code = """
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import os
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 
-# Setting page configuration
-st.set_page_config(page_title="South Korean Lotto Analysis", layout="wide")
+def app():
+    st.title("역대 로또 당첨번호 분석")
+    st.write("로또 당첨번호를 많이 나온 횟수 순으로 막대그래프로 보여줍니다.")
 
-# Adding title and description
-st.title("South Korean Lotto Winning Numbers Analysis")
-st.markdown("""
-This app analyzes historical South Korean Lotto winning numbers (Draws 1 to 1144, up to November 2, 2024) 
-and predicts numbers for the current week based on frequency.
-""")
-
-# Debugging: Display current working directory and file existence
-st.write(f"Current working directory: {os.getcwd()}")
-file_path = "lotto_data.csv"
-st.write(f"Checking for CSV file at: {file_path}")
-if os.path.exists(file_path):
-    st.success("CSV file found!")
-else:
-    st.error(f"CSV file not found at: {file_path}. Please ensure it is uploaded to the repository root.")
-
-# Loading the CSV file
-@st.cache_data
-def load_data():
+    # Load the data (assuming lotto_data.csv is in the same directory)
     try:
-        df = pd.read_csv(file_path)
-        st.success("CSV file loaded successfully!")
-        st.write(f"Columns in CSV file: {list(df.columns)}")
-        return df
+        df = pd.read_csv('lotto_data.csv')
     except FileNotFoundError:
-        st.error(f"CSV file not found at: {file_path}. Please upload 'lotto_data.csv' to the repository.")
-        return None
-    except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
-        return None
+        st.error("lotto_data.csv 파일을 찾을 수 없습니다. 파일이 앱과 같은 디렉토리에 있는지 확인하세요.")
+        return
 
-df = load_data()
-if df is None:
-    st.stop()
-
-# Processing winning numbers
-def calculate_frequencies(df):
-    try:
-        main_numbers = df[['첫번째', '두번째', '세번째', '네번째', '다섯번째', '여섯번째']].values.flatten()
-        bonus_numbers = df['보너스'].values
-        
-        main_freq = pd.Series(main_numbers).value_counts().sort_index()
-        bonus_freq = pd.Series(bonus_numbers).value_counts().sort_index()
-        
-        freq_df = pd.DataFrame({'Number': range(1, 46), 'Main_Frequency': 0, 'Bonus_Frequency': 0})
-        freq_df.set_index('Number', inplace=True)
-        
-        for num in range(1, 46):
-            if num in main_freq.index:
-                freq_df.loc[num, 'Main_Frequency'] = main_freq[num]
-            if num in bonus_freq.index:
-                freq_df.loc[num, 'Bonus_Frequency'] = bonus_freq[num]
-        
-        freq_df['Total_Frequency'] = freq_df['Main_Frequency'] + freq_df['Bonus_Frequency']
-        return freq_df
-    except Exception as e:
-        st.error(f"Error processing frequencies: {str(e)}")
-        return None
-
-freq_df = calculate_frequencies(df)
-if freq_df is None:
-    st.stop()
-
-# Creating bar chart with Plotly
-fig = px.bar(
-    freq_df.reset_index(),
-    x='Number',
-    y='Main_Frequency',
-    labels={'Main_Frequency': 'Frequency', 'Number': 'Lotto Number'},
-    title='Frequency of Main Winning Numbers (Draws 1 to 1144)',
-    color='Main_Frequency',
-    color_continuous_scale='Viridis'
-)
-fig.update_layout(
-    xaxis=dict(tickmode='linear', tick0=1, dtick=1),
-    yaxis_title='Number of Appearances',
-    xaxis_title='Lotto Number (1-45)',
-    showlegend=False
-)
-
-# Displaying the bar chart
-st.plotly_chart(fig, use_container_width=True)
-
-# Predicting this week's numbers
-st.subheader("Predicted Numbers for This Week")
-st.markdown("Based on the most frequent numbers in historical draws.")
-
-try:
-    top_main_numbers = freq_df['Main_Frequency'].nlargest(6).index.tolist()
-    top_bonus_number = freq_df['Bonus_Frequency'].nlargest(1).index[0]
+    # Select the columns containing lotto numbers and bonus number
+    lotto_columns = ['첫번째', '두번째', '세번째', '네번째', '다섯번째', '여섯번째', '보너스']
     
-    st.write("**Predicted Main Numbers**: " + ", ".join(map(str, sorted(top_main_numbers))))
-    st.write("**Predicted Bonus Number**: " + str(top_bonus_number))
-    st.markdown("""
-    *Note*: This prediction is based on historical frequency and does not guarantee a win, as lottery draws are random.
-    """)
-except Exception as e:
-    st.error(f"Error generating predictions: {str(e)}")
+    # Drop rows where any of the lotto number columns are NaN
+    df_cleaned = df.dropna(subset=lotto_columns)
+
+    # Convert lotto number columns to integer type, handling potential non-integer values
+    for col in lotto_columns:
+        df_cleaned[col] = pd.to_numeric(df_cleaned[col], errors='coerce')
+    df_cleaned = df_cleaned.dropna(subset=lotto_columns)
+    df_cleaned[lotto_columns] = df_cleaned[lotto_columns].astype(int)
+
+    # Melt the DataFrame to get all lotto numbers in a single column
+    all_lotto_numbers = df_cleaned[lotto_columns].melt(var_name='NumberType', value_name='LottoNumber')['LottoNumber']
+
+    # Count the occurrences of each number
+    number_counts = all_lotto_numbers.value_counts().sort_values(ascending=False)
+
+    st.subheader("로또 번호 출현 횟수 (많이 나온 순)")
+
+    # Create the bar chart
+    fig, ax = plt.subplots(figsize=(15, 8))
+    sns.barplot(x=number_counts.index, y=number_counts.values, palette='viridis', ax=ax)
+    ax.set_title('역대 로또 당첨번호 출현 횟수', fontsize=16)
+    ax.set_xlabel('로또 번호', fontsize=12)
+    ax.set_ylabel('출현 횟수', fontsize=12)
+    plt.xticks(rotation=90)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    st.pyplot(fig)
+
+    st.subheader("출현 횟수 데이터")
+    st.dataframe(number_counts)
+
+if __name__ == '__main__':
+    app()
+"""
+    return streamlit_code
+
+# Generate the Streamlit app code
+streamlit_app_code = generate_streamlit_app_code()
+
+# Save the code to a file
+with open('lotto_analyzer_app.py', 'w', encoding='utf-8') as f:
+    f.write(streamlit_app_code)
+
+print("Streamlit 앱 파일 'lotto_analyzer_app.py'가 생성되었습니다.")

@@ -130,8 +130,41 @@ def app():
         st.error(f"막대 그래프 생성 중 오류가 발생했습니다: {e}")
 
     st.subheader("로또 번호 출현 횟수 데이터")
-    # st.dataframe 대신 st.table을 사용하여 스크롤 없이 전체 데이터 표시
-    st.table(number_counts) 
+    if not number_counts.empty:
+        df_counts = number_counts.reset_index()
+        df_counts.columns = ['번호', '횟수']
+
+        num_rows_target = 10 # 목표 행 수
+        num_total_entries = len(df_counts)
+
+        # 필요한 열 쌍의 수 계산 (최대 5열까지)
+        num_pairs_per_row = max(1, int(np.ceil(num_total_entries / num_rows_target)))
+        
+        # 재구성된 데이터를 담을 리스트
+        reshaped_data = []
+        for i in range(num_rows_target):
+            row_data = {}
+            for j in range(num_pairs_per_row):
+                idx = i + j * num_rows_target
+                if idx < num_total_entries:
+                    row_data[f'번호 {j+1}'] = df_counts.iloc[idx]['번호']
+                    row_data[f'횟수 {j+1}'] = df_counts.iloc[idx]['횟수']
+                else:
+                    # 데이터가 없는 셀은 빈 문자열로 채움 (NaN은 st.table에서 빈 칸으로 보임)
+                    # 보기 좋게 빈 칸으로 보이도록 np.nan 유지
+                    row_data[f'번호 {j+1}'] = np.nan 
+                    row_data[f'횟수 {j+1}'] = np.nan
+            reshaped_data.append(row_data)
+
+        # 리스트를 DataFrame으로 변환
+        reshaped_df = pd.DataFrame(reshaped_data)
+        
+        # 모든 값이 NaN인 열은 제거 (예: 45개 미만일 때 생길 수 있는 불필요한 열)
+        reshaped_df.dropna(axis=1, how='all', inplace=True)
+
+        st.table(reshaped_df) # st.table로 스크롤 없이 전체 데이터 표시
+    else:
+        st.warning("경고: 로또 번호 출현 횟수 데이터가 없습니다.")
 
     # --- 로또 당첨번호 예측 기능 추가 ---
     st.subheader("이번 주 로또 당첨번호 예측 (5세트)")

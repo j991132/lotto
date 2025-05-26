@@ -5,7 +5,7 @@ import seaborn as sns
 import numpy as np
 from matplotlib import font_manager, rc
 from datetime import datetime, date, timedelta
-import random # random 모듈 임포트 추가
+import random
 
 def app():
     st.set_page_config(layout="wide")
@@ -53,9 +53,7 @@ def app():
 
         st.sidebar.header("기간 선택")
 
-        # 기본 종료일을 현재 날짜로 설정 (데이터셋의 최대 날짜를 넘지 않도록)
         default_end_date = min(date.today(), max_dataset_date)
-        # 기본 시작일을 현재 날짜로부터 1년 전으로 설정 (데이터셋의 최소 날짜보다 이전으로 가지 않도록)
         default_start_date = max(default_end_date - timedelta(days=365), min_dataset_date)
 
         selected_start_date = st.sidebar.date_input("시작일", value=default_start_date, min_value=min_dataset_date, max_value=max_dataset_date)
@@ -137,12 +135,19 @@ def app():
     # --- 로또 당첨번호 예측 기능 추가 ---
     st.subheader("이번 주 로또 당첨번호 예측 (5세트)")
     st.info("이 예측은 과거 당첨번호의 출현 빈도에 기반한 통계적 추정이며, 실제 당첨을 보장하지 않습니다. 로또는 무작위 게임입니다.")
+    
+    # 예측 근거 설명 추가
+    st.markdown("""
+    **예측 번호 선정 근거:**
+    이 예측은 현재 화면에 표시된 기간 동안의 로또 당첨 번호 출현 횟수 통계를 바탕으로 합니다.
+    특히, **가장 많이 출현한 상위 30개 번호들을 선별하여 예측 풀**을 만들고,
+    이 풀에서 6개의 고유한 숫자를 무작위로 조합하여 각 세트를 구성합니다.
+    이는 통계적 경향성을 활용한 것이지만, 로또 당첨은 전적으로 무작위이므로 참고용으로만 활용하시기 바랍니다.
+    """)
 
     if not number_counts.empty:
         all_possible_numbers = number_counts.index.tolist()
         
-        # 예측에 사용할 번호 풀 (가장 많이 나온 번호들 상위 30개)
-        # 전체 번호 개수보다 많아지지 않도록 min 함수 사용
         prediction_pool_size = min(30, len(all_possible_numbers)) 
         prediction_pool = number_counts.head(prediction_pool_size).index.tolist()
 
@@ -150,20 +155,15 @@ def app():
         num_sets_to_predict = 5
         numbers_per_set = 6
 
-        # 5세트의 예측 번호 생성
         while len(predicted_sets) < num_sets_to_predict:
             if len(prediction_pool) < numbers_per_set:
-                # 예측 풀이 충분하지 않으면 전체 로또 번호에서 무작위 선택
-                current_set = sorted(random.sample(range(1, 46), numbers_per_set)) # 로또 번호는 1-45
+                current_set = sorted(random.sample(range(1, 46), numbers_per_set))
             else:
-                # 예측 풀에서 무작위 선택
                 current_set = sorted(random.sample(prediction_pool, numbers_per_set))
             
-            # 생성된 세트가 이미 예측된 세트 목록에 없는지 확인 (중복 방지)
             if current_set not in predicted_sets:
                 predicted_sets.append(current_set)
 
-        # 예측 결과 출력
         for i, lotto_set in enumerate(predicted_sets):
             st.write(f"**예측 {i+1}**: {', '.join(map(str, lotto_set))}")
     else:
